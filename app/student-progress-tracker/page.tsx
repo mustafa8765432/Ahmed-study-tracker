@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, Plus, X, Play, Pause, RotateCcw, Flame, BookOpen, Calendar, Clock, Trash2, ChevronRight, ArrowRight } from 'lucide-react';
+import {
+  CheckCircle2, Circle, Plus, X, Play, Pause, RotateCcw, Flame,
+  BookOpen, Calendar, Clock, Trash2, ChevronRight, ArrowRight
+} from 'lucide-react';
 
 const SUBJECTS = [
   { id: 'islamic', name: 'الإسلامية', color: 'from-emerald-500 to-teal-600' },
@@ -21,11 +24,11 @@ const POMODORO_MODES = [
 
 export default function StudentProgressTracker() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedSubject, setSelectedSubject] = useState(null);
-  const [subjects, setSubjects] = useState({});
-  const [tasks, setTasks] = useState([]);
-  const [streak, setStreak] = useState(0);
-  const [lastActiveDate, setLastActiveDate] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [subjects, setSubjects] = useState<Record<string, any>>({});
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [streak, setStreak] = useState<number>(0);
+  const [lastActiveDate, setLastActiveDate] = useState<string | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
   const [pomodoroTime, setPomodoroTime] = useState(0);
   const [pomodoroMode, setPomodoroMode] = useState(0);
@@ -35,65 +38,60 @@ export default function StudentProgressTracker() {
   const [newTask, setNewTask] = useState({ title: '', subject: 'islamic' });
   const [newLesson, setNewLesson] = useState('');
 
+  // ✅ Load data safely using localStorage (no window.storage)
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const subjectsData = await window.storage.get('subjects');
-        const tasksData = await window.storage.get('tasks');
-        const streakData = await window.storage.get('streak');
-        const lastDateData = await window.storage.get('lastActiveDate');
+    if (typeof window === 'undefined') return;
+    try {
+      const subjectsData = localStorage.getItem('subjects');
+      const tasksData = localStorage.getItem('tasks');
+      const streakData = localStorage.getItem('streak');
+      const lastDateData = localStorage.getItem('lastActiveDate');
 
-        if (subjectsData) {
-          setSubjects(JSON.parse(subjectsData.value));
-        } else {
-          const initialSubjects = {};
-          SUBJECTS.forEach(s => {
-            initialSubjects[s.id] = { progress: 0, lessons: [], achievements: [] };
-          });
-          setSubjects(initialSubjects);
-        }
-
-        if (tasksData) setTasks(JSON.parse(tasksData.value));
-        if (streakData) setStreak(parseInt(streakData.value));
-        if (lastDateData) setLastActiveDate(lastDateData.value);
-        
-        updateStreak(lastDateData?.value);
-      } catch (error) {
-        const initialSubjects = {};
+      if (subjectsData) {
+        setSubjects(JSON.parse(subjectsData));
+      } else {
+        const initialSubjects: Record<string, any> = {};
         SUBJECTS.forEach(s => {
           initialSubjects[s.id] = { progress: 0, lessons: [], achievements: [] };
         });
         setSubjects(initialSubjects);
       }
-    };
-    loadData();
+
+      if (tasksData) setTasks(JSON.parse(tasksData));
+      if (streakData) setStreak(parseInt(streakData));
+      if (lastDateData) setLastActiveDate(lastDateData);
+
+      updateStreak(lastDateData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
   }, []);
 
+  // ✅ Save data safely
   useEffect(() => {
-    const saveData = async () => {
-      try {
-        await window.storage.set('subjects', JSON.stringify(subjects));
-        await window.storage.set('tasks', JSON.stringify(tasks));
-        await window.storage.set('streak', streak.toString());
-        if (lastActiveDate) {
-          await window.storage.set('lastActiveDate', lastActiveDate);
-        }
-      } catch (error) {
-        console.error('Error saving data:', error);
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('subjects', JSON.stringify(subjects));
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      localStorage.setItem('streak', streak.toString());
+      if (lastActiveDate) {
+        localStorage.setItem('lastActiveDate', lastActiveDate);
       }
-    };
-    saveData();
+    } catch (error) {
+      console.error('Error saving data:', error);
+    }
   }, [subjects, tasks, streak, lastActiveDate]);
 
+  // ✅ Pomodoro logic (unchanged)
   useEffect(() => {
-    let interval;
+    let interval: NodeJS.Timeout | undefined;
     if (pomodoroRunning && pomodoroTime > 0) {
       interval = setInterval(() => {
         setPomodoroTime(prev => {
           if (prev <= 1) {
             setPomodoroRunning(false);
             setIsPomodoroBrk(!isPomodoroBrk);
-            const nextTime = !isPomodoroBrk 
+            const nextTime = !isPomodoroBrk
               ? POMODORO_MODES[pomodoroMode].break * 60
               : POMODORO_MODES[pomodoroMode].duration * 60;
             return nextTime;
@@ -105,7 +103,7 @@ export default function StudentProgressTracker() {
     return () => clearInterval(interval);
   }, [pomodoroRunning, pomodoroTime, isPomodoroBrk, pomodoroMode]);
 
-  const updateStreak = (lastDate) => {
+  const updateStreak = (lastDate: string | null) => {
     const today = new Date().toDateString();
     if (!lastDate) {
       setStreak(1);
